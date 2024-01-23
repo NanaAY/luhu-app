@@ -62,28 +62,26 @@ const showPopularMovies = (movies) => {
       ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
       : "/images/no-image.jpg";
     cardLinkImage.classList.add("card-img-top");
-    cardLinkImage.alt = movie.original_title;
+    cardLinkImage.alt = movie.title;
 
     const cardBody = document.createElement("div");
     cardBody.classList.add("card-body");
 
     const cardTitle = document.createElement("h5");
     cardTitle.classList.add("card-title");
-    cardTitle.textContent = movie.original_title;
+    cardTitle.textContent = movie.title;
 
     const cardText = document.createElement("p");
     cardText.classList.add("card-text");
 
     const small = document.createElement("small");
     small.classList.add("text-muted");
-    small.textContent = `Released: ${movie.release_date}`;
+    small.textContent = `Release: ${movie.release_date}`;
 
     cardText.appendChild(small);
-    cardBody.appendChild(cardText);
-    cardBody.appendChild(cardTitle);
+    cardBody.append(cardTitle, cardText);
     cardLink.appendChild(cardLinkImage);
-    moviesCard.appendChild(cardLink);
-    moviesCard.appendChild(cardBody);
+    moviesCard.append(cardLink, cardBody);
     document.getElementById("popular-movies").appendChild(moviesCard);
   });
 };
@@ -127,13 +125,118 @@ const showPopularShows = (tvShows) => {
     small.textContent = `First Aired: ${tvShow.first_air_date}`;
 
     cardText.appendChild(small);
-    cardBody.appendChild(cardText);
-    cardBody.appendChild(cardTitle);
+    cardBody.append(cardTitle, cardText);
     cardLink.appendChild(cardLinkImage);
-    tvCard.appendChild(cardLink);
-    tvCard.appendChild(cardBody);
+    tvCard.append(cardLink, cardBody);
     document.getElementById("popular-shows").appendChild(tvCard);
   });
+};
+
+//Fetches details of a particular movie using the fetchData function
+const getMovieDetails = async () => {
+  const href = window.location.href;
+  const movieID = href.slice(44);
+  const endpoint1 = `/movie/${movieID}?language=en-US`;
+  const endpoint2 = `/movie/${movieID}/credits?language=en-US`;
+  const movie = await fetchData(endpoint1);
+  const credits = await fetchData(endpoint2);
+  showMovieDetails(credits, movie);
+};
+
+//Adds movie details to the DOM
+const showMovieDetails = (credits, movie) => {
+  displayBackgroundImage("movie", movie.backdrop_path);
+  //creating the elements to show on th DOM
+  const detailsTop = document.querySelector(".details-top");
+  const detailsBottom = document.querySelector(".details-bottom");
+
+  const imgDiv = document.createElement("div");
+  const img = document.createElement("img");
+  img.src = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    : "/images/no-img.jpg";
+  img.classList.add("card-img-top");
+  img.alt = movie.title;
+  imgDiv.appendChild(img);
+
+  const bodyDiv = document.createElement("div");
+  const movieTitle = document.createElement("h2");
+  movieTitle.textContent = movie.title;
+  const rating = document.createElement("p");
+  const ratingIcon = document.createElement("i");
+  ratingIcon.classList.add("fas", "fa-star", "text-primary");
+  rating.textContent = `${movie.vote_average.toFixed(1)} / 10 `;
+  rating.appendChild(ratingIcon);
+  const releaseDate = document.createElement("p");
+  releaseDate.classList.add("text-muted");
+  releaseDate.textContent = movie.release_date;
+  const summary = document.createElement("p");
+  summary.textContent = movie.overview;
+  const genres = document.createElement("h5");
+  genres.textContent = "Genres";
+  const genreList = document.createElement("ul");
+  movie.genres.forEach((genre) => {
+    //create li for each genre
+    const genreItem = document.createElement("li");
+    genreItem.textContent = genre.name;
+    genreList.appendChild(genreItem); //and append to ul of genres
+  });
+  const creditsH4 = document.createElement("h4");
+  creditsH4.textContent = "Starring ";
+  creditsH4.style.paddingTop = "20px";
+  const castName = document.createElement("div");
+  castName.classList.add("list-group");
+  const topCast = mostPopularCast(credits.cast);
+  topCast.forEach((cast) => {
+    castName.textContent += `${cast.name}, `;
+  });
+  const movieHomepage = document.createElement("a");
+  movieHomepage.classList.add("btn");
+  movieHomepage.textContent = "Visit Movie Homepage";
+  movieHomepage.href = movie.homepage;
+  movieHomepage.target = "_blank";
+
+  bodyDiv.append(
+    movieTitle,
+    rating,
+    releaseDate,
+    summary,
+    genres,
+    genreList,
+    creditsH4,
+    castName,
+    movieHomepage
+  );
+
+  detailsTop.append(imgDiv, bodyDiv);
+
+  //Movie info
+  const movieInfoH2 = document.createElement("h2");
+  movieInfoH2.textContent = "Movie Info";
+  const movieInfoList = document.createElement("ul");
+  movieInfoList.innerHTML = `
+  <li><span class="text-secondary">Budget:</span> $${formatNumber(
+    movie.budget
+  )}</li>
+  <li><span class="text-secondary">Revenue:</span> $${formatNumber(
+    movie.revenue
+  )}</li>
+  <li><span class="text-secondary">Runtime:</span> ${movie.runtime} mins</li>
+  <li><span class="text-secondary">Status:</span> ${movie.release_date}</li>`;
+  const productionH4 = document.createElement("h4");
+  productionH4.textContent = "Production Companies";
+  const productionCompanies = document.createElement("div");
+  productionCompanies.classList.add("list-group");
+  movie.production_companies.forEach((company) => {
+    productionCompanies.textContent += `${company.name}, `;
+  });
+
+  detailsBottom.append(
+    movieInfoH2,
+    movieInfoList,
+    productionH4,
+    productionCompanies
+  );
 };
 
 //Highlights the active navbar link
@@ -144,6 +247,42 @@ const highlightActiveLink = () => {
       link.classList.add("active");
     }
   });
+};
+
+//Adds comas to numbers
+const formatNumber = (number) => {
+  return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
+//Displays baground image on details pages
+const displayBackgroundImage = (type, path) => {
+  const backgroundDiv = document.createElement("div");
+  backgroundDiv.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${path})`;
+  backgroundDiv.style.backgroundSize = "cover";
+  backgroundDiv.style.backgroundPosition = "center";
+  backgroundDiv.style.backgroundRepeat = "no-repeat";
+  backgroundDiv.style.height = "100vh";
+  backgroundDiv.style.width = "100vw";
+  backgroundDiv.style.position = "absolute";
+  backgroundDiv.style.top = "75px";
+  backgroundDiv.style.left = "0";
+  backgroundDiv.style.zIndex = "-1";
+  backgroundDiv.style.opacity = "0.1";
+
+  if (type === "movie") {
+    document.getElementById("movie-details").appendChild(backgroundDiv);
+  } else {
+    document.getElementById("show-details").appendChild(backgroundDiv);
+  }
+};
+
+//returns list of top 5 cast with the highest popularity rating
+const mostPopularCast = (arrCast) => {
+  arrCast.sort((a, b) => {
+    return a.popularity - b.popularity;
+  });
+  console.log(arrCast);
+  return arrCast.reverse().slice(0, 5);
 };
 
 //Initialize app
@@ -158,7 +297,7 @@ function init() {
       getPopularShows();
       break;
     case "/movie-details.html":
-      console.log("movie details page");
+      getMovieDetails();
       break;
     case "/search.html":
       console.log("search page");

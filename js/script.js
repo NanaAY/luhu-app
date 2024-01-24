@@ -163,13 +163,11 @@ const showMovieDetails = (credits, movie) => {
   const movieTitle = document.createElement("h2");
   movieTitle.textContent = movie.title;
   const rating = document.createElement("p");
-  const ratingIcon = document.createElement("i");
-  ratingIcon.classList.add("fas", "fa-star", "text-primary");
-  rating.textContent = `${movie.vote_average.toFixed(1)} / 10 `;
-  rating.appendChild(ratingIcon);
-  const releaseDate = document.createElement("p");
+  rating.textContent = `IMDB: ${movie.vote_average.toFixed(1)}`;
+  rating.id = "rating";
+  const releaseDate = document.createElement("h4");
   releaseDate.classList.add("text-muted");
-  releaseDate.textContent = movie.release_date;
+  releaseDate.textContent = `Released ${movie.release_date}`;
   const summary = document.createElement("p");
   summary.textContent = movie.overview;
   const genres = document.createElement("h5");
@@ -222,7 +220,7 @@ const showMovieDetails = (credits, movie) => {
     movie.revenue
   )}</li>
   <li><span class="text-secondary">Runtime:</span> ${movie.runtime} mins</li>
-  <li><span class="text-secondary">Status:</span> ${movie.release_date}</li>`;
+  <li><span class="text-secondary">Status:</span> ${movie.status}</li>`;
   const productionH4 = document.createElement("h4");
   productionH4.textContent = "Production Companies";
   const productionCompanies = document.createElement("div");
@@ -234,6 +232,107 @@ const showMovieDetails = (credits, movie) => {
   detailsBottom.append(
     movieInfoH2,
     movieInfoList,
+    productionH4,
+    productionCompanies
+  );
+};
+
+//Fetches details of a particular tv show using the fetchData function
+const getTvDetails = async () => {
+  const href = window.location.href;
+  const showID = href.slice(41);
+  const endpoint1 = `/tv/${showID}?language=en-US`;
+  const endpoint2 = `/tv/${showID}/credits?language=en-US`;
+  const movie = await fetchData(endpoint1);
+  const credits = await fetchData(endpoint2);
+  showTvDetails(credits, movie);
+};
+
+//Adds tv show details to the DOM
+const showTvDetails = (credits, tvShow) => {
+  displayBackgroundImage("tv", tvShow.backdrop_path);
+  //creating the elements to show on th DOM
+  const detailsTop = document.querySelector(".details-top");
+  const detailsBottom = document.querySelector(".details-bottom");
+
+  const imgDiv = document.createElement("div");
+  const img = document.createElement("img");
+  img.src = tvShow.poster_path
+    ? `https://image.tmdb.org/t/p/w500${tvShow.poster_path}`
+    : "/images/no-img.jpg";
+  img.classList.add("card-img-top");
+  img.alt = tvShow.name;
+  imgDiv.appendChild(img);
+
+  const bodyDiv = document.createElement("div");
+  const tvShowTitle = document.createElement("h2");
+  tvShowTitle.textContent = tvShow.name;
+  const rating = document.createElement("p");
+  rating.textContent = `IMDB: ${tvShow.vote_average.toFixed(1)}`;
+  rating.id = "rating";
+  const releaseDate = document.createElement("h4");
+  releaseDate.classList.add("text-muted");
+  releaseDate.textContent = `First Aired ${tvShow.first_air_date}`;
+  const summary = document.createElement("p");
+  summary.textContent = tvShow.overview;
+  const genres = document.createElement("h5");
+  genres.textContent = "Genres";
+  const genreList = document.createElement("ul");
+  tvShow.genres.forEach((genre) => {
+    //create li for each genre
+    const genreItem = document.createElement("li");
+    genreItem.textContent = genre.name;
+    genreList.appendChild(genreItem); //and append to ul of genres
+  });
+  const creditsH4 = document.createElement("h4");
+  creditsH4.textContent = "Starring ";
+  creditsH4.style.paddingTop = "20px";
+  const castName = document.createElement("div");
+  castName.classList.add("list-group");
+  const topCast = mostPopularCast(credits.cast);
+  topCast.forEach((cast) => {
+    castName.textContent += `${cast.name}, `;
+  });
+  const tvShowHomepage = document.createElement("a");
+  tvShowHomepage.classList.add("btn");
+  tvShowHomepage.textContent = "Visit Show Homepage";
+  tvShowHomepage.href = tvShow.homepage;
+  tvShowHomepage.target = "_blank";
+
+  bodyDiv.append(
+    tvShowTitle,
+    rating,
+    releaseDate,
+    summary,
+    genres,
+    genreList,
+    creditsH4,
+    castName,
+    tvShowHomepage
+  );
+
+  detailsTop.append(imgDiv, bodyDiv);
+
+  //tvShow info
+  const tvShowInfoH2 = document.createElement("h2");
+  tvShowInfoH2.textContent = "Show Info";
+  const tvShowInfoList = document.createElement("ul");
+  tvShowInfoList.innerHTML = `
+  <li><span class="text-secondary">Number of Episodes:</span> ${tvShow.number_of_episodes}</li>
+  <li><span class="text-secondary">Number of Seasons:</span> ${tvShow.number_of_seasons}</li>
+  <li><span class="text-secondary">Last Episode To Air:</span> ${tvShow.last_episode_to_air.name}</li>
+  <li><span class="text-secondary">Status:</span> ${tvShow.status}</li>`;
+  const productionH4 = document.createElement("h4");
+  productionH4.textContent = "Production Companies";
+  const productionCompanies = document.createElement("div");
+  productionCompanies.classList.add("list-group");
+  tvShow.production_companies.forEach((company) => {
+    productionCompanies.textContent += `${company.name}, `;
+  });
+
+  detailsBottom.append(
+    tvShowInfoH2,
+    tvShowInfoList,
     productionH4,
     productionCompanies
   );
@@ -261,7 +360,7 @@ const displayBackgroundImage = (type, path) => {
   backgroundDiv.style.backgroundSize = "cover";
   backgroundDiv.style.backgroundPosition = "center";
   backgroundDiv.style.backgroundRepeat = "no-repeat";
-  backgroundDiv.style.height = "100vh";
+  backgroundDiv.style.height = "750px";
   backgroundDiv.style.width = "100vw";
   backgroundDiv.style.position = "absolute";
   backgroundDiv.style.top = "75px";
@@ -281,7 +380,6 @@ const mostPopularCast = (arrCast) => {
   arrCast.sort((a, b) => {
     return a.popularity - b.popularity;
   });
-  console.log(arrCast);
   return arrCast.reverse().slice(0, 5);
 };
 
@@ -299,11 +397,11 @@ function init() {
     case "/movie-details.html":
       getMovieDetails();
       break;
+    case "/tv-details.html":
+      getTvDetails();
+      break;
     case "/search.html":
       console.log("search page");
-      break;
-    case "/tv-details.html":
-      console.log("tv details page");
       break;
   }
 

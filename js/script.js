@@ -47,6 +47,42 @@ const getPopularMovies = async () => {
   showPopularMovies(data.results);
 };
 
+//Fetches popular shows using the fetchData function
+const getPopularShows = async () => {
+  const endpoint = "/tv/popular?language=en-US&page=1";
+  const data = await fetchData(endpoint);
+  showPopularShows(data.results);
+};
+
+//Fetches details of a particular movie using the fetchData function
+const getMovieDetails = async () => {
+  const href = window.location.href;
+  const movieID = href.slice(44);
+  const endpoint1 = `/movie/${movieID}?language=en-US`;
+  const endpoint2 = `/movie/${movieID}/credits?language=en-US`;
+  const movie = await fetchData(endpoint1);
+  const credits = await fetchData(endpoint2);
+  showMovieDetails(credits, movie);
+};
+
+//Fetches details of a particular tv show using the fetchData function
+const getTvDetails = async () => {
+  const href = window.location.href;
+  const showID = href.slice(41);
+  const endpoint1 = `/tv/${showID}?language=en-US`;
+  const endpoint2 = `/tv/${showID}/credits?language=en-US`;
+  const movie = await fetchData(endpoint1);
+  const credits = await fetchData(endpoint2);
+  showTvDetails(credits, movie);
+};
+
+//Fetches now playing movies using the fetchData function
+const getNowPlaying = async () => {
+  const endpoint = "/movie/now_playing?language=en-US&page=1";
+  const data = await fetchData(endpoint);
+  showNowPlaying(data.results);
+};
+
 //Adds popular movies to the DOM
 const showPopularMovies = (movies) => {
   //creating the card item for each movie in the list of movies
@@ -84,13 +120,6 @@ const showPopularMovies = (movies) => {
     moviesCard.append(cardLink, cardBody);
     document.getElementById("popular-movies").appendChild(moviesCard);
   });
-};
-
-//Fetches popular shows using the fetchData function
-const getPopularShows = async () => {
-  const endpoint = "/tv/popular?language=en-US&page=1";
-  const data = await fetchData(endpoint);
-  showPopularShows(data.results);
 };
 
 //Adds popular shows to the DOM
@@ -132,17 +161,6 @@ const showPopularShows = (tvShows) => {
   });
 };
 
-//Fetches details of a particular movie using the fetchData function
-const getMovieDetails = async () => {
-  const href = window.location.href;
-  const movieID = href.slice(44);
-  const endpoint1 = `/movie/${movieID}?language=en-US`;
-  const endpoint2 = `/movie/${movieID}/credits?language=en-US`;
-  const movie = await fetchData(endpoint1);
-  const credits = await fetchData(endpoint2);
-  showMovieDetails(credits, movie);
-};
-
 //Adds movie details to the DOM
 const showMovieDetails = (credits, movie) => {
   displayBackgroundImage("movie", movie.backdrop_path);
@@ -162,7 +180,7 @@ const showMovieDetails = (credits, movie) => {
   const bodyDiv = document.createElement("div");
   const movieTitle = document.createElement("h2");
   movieTitle.textContent = movie.title;
-  const rating = document.createElement("p");
+  const rating = document.createElement("h5");
   rating.textContent = `IMDB: ${movie.vote_average.toFixed(1)}`;
   rating.id = "rating";
   const releaseDate = document.createElement("h4");
@@ -237,17 +255,6 @@ const showMovieDetails = (credits, movie) => {
   );
 };
 
-//Fetches details of a particular tv show using the fetchData function
-const getTvDetails = async () => {
-  const href = window.location.href;
-  const showID = href.slice(41);
-  const endpoint1 = `/tv/${showID}?language=en-US`;
-  const endpoint2 = `/tv/${showID}/credits?language=en-US`;
-  const movie = await fetchData(endpoint1);
-  const credits = await fetchData(endpoint2);
-  showTvDetails(credits, movie);
-};
-
 //Adds tv show details to the DOM
 const showTvDetails = (credits, tvShow) => {
   displayBackgroundImage("tv", tvShow.backdrop_path);
@@ -267,7 +274,7 @@ const showTvDetails = (credits, tvShow) => {
   const bodyDiv = document.createElement("div");
   const tvShowTitle = document.createElement("h2");
   tvShowTitle.textContent = tvShow.name;
-  const rating = document.createElement("p");
+  const rating = document.createElement("h5");
   rating.textContent = `IMDB: ${tvShow.vote_average.toFixed(1)}`;
   rating.id = "rating";
   const releaseDate = document.createElement("h4");
@@ -338,6 +345,52 @@ const showTvDetails = (credits, tvShow) => {
   );
 };
 
+const showNowPlaying = (movies) => {
+  movies.forEach((movie) => {
+    const moviesCard = document.createElement("div");
+    moviesCard.classList.add("swiper-slide");
+
+    const cardLink = document.createElement("a");
+    cardLink.href = `movie-details.html?id=${movie.id}`;
+
+    const cardLinkImage = document.createElement("img");
+    cardLinkImage.src = movie.poster_path
+      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+      : "./images/no-image.jpg";
+    cardLinkImage.alt = movie.title;
+
+    cardLink.appendChild(cardLinkImage);
+
+    moviesCard.append(cardLink);
+    document.querySelector(".swiper-wrapper").appendChild(moviesCard);
+    initializeSwiper();
+  });
+};
+
+// ---------utility functions------------
+const initializeSwiper = () => {
+  const swiper = new Swiper(".swiper", {
+    slidesPerView: 4,
+    spaceBetween: 30,
+    freeMode: true,
+    loop: true,
+    autoplay: {
+      delay: 4000,
+      disabledOnItersction: false,
+    },
+    breakpoints: {
+      500: {
+        slidesperView: 2,
+      },
+      700: {
+        slidesperView: 3,
+      },
+      1200: {
+        slidesperView: 4,
+      },
+    },
+  });
+};
 //Highlights the active navbar link
 const highlightActiveLink = () => {
   const navLinks = document.querySelectorAll(".nav-link");
@@ -390,6 +443,7 @@ function init() {
     case "/":
     case "/index.html":
       getPopularMovies();
+      getNowPlaying();
       break;
     case "/shows.html":
       getPopularShows();

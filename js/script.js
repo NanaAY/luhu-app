@@ -1,5 +1,12 @@
 const appState = {
   currentPage: window.location.pathname,
+  search: {
+    query: "",
+    type: "",
+    page: 1,
+    totalPages: 1,
+    totalResults: 0,
+  },
 };
 
 //fetches data from the movies database api
@@ -26,18 +33,6 @@ const fetchData = async (endpoint) => {
   } catch (error) {
     alert("Error: " + error);
   }
-};
-
-//Shows the loading overlay
-const showLoading = () => {
-  document.activeElement.blur();
-  document.querySelector(".loading").classList.remove("hidden");
-};
-
-//Hides the loading overlay
-const hideLoading = () => {
-  document.activeElement.blur();
-  document.querySelector(".loading").classList.add("hidden");
 };
 
 //Fetches popular movies using the fetchData function
@@ -81,6 +76,30 @@ const getNowPlaying = async () => {
   const endpoint = "/movie/now_playing?language=en-US&page=1";
   const data = await fetchData(endpoint);
   showNowPlaying(data.results);
+};
+
+const getSearchResults = async () => {
+  const queryString = window.location.search;
+  const urlParams = new URLSearchParams(queryString);
+  appState.search.type = urlParams.get("type");
+  appState.search.query = urlParams.get("search-term");
+
+  if (appState.search.query === "" || appState.search.query === null) {
+    hideLoading();
+    showAlert("Please enter a movie or tv show", "error");
+    return;
+  } else {
+    const endpoint = `/search/${appState.search.type}?query=${appState.search.query}&include_adult=false&language=en-US&page=${appState.search.page}`;
+    // destructuring bcos the return object has a result, page, total_pages & total_reults value
+    const { results, page, total_results, total_pages } = await fetchData(
+      endpoint
+    );
+    appState.search.page = page;
+    appState.search.totalPages = total_pages;
+    appState.search.totalResults = total_results;
+    showSearchResults(results);
+    document.getElementById("search-term").value = "";
+  }
 };
 
 //Adds popular movies to the DOM
@@ -367,7 +386,61 @@ const showNowPlaying = (movies) => {
   });
 };
 
-// ---------utility functions------------
+const showSearchResults = (searchResults) => {
+  //clear prev page results
+  document.getElementById("search-results").innerHTML = "";
+  document.getElementById("search-results-heading").innerHTML = "";
+  if (searchResults.length === 0) {
+    showAlert("No matches found", "error");
+    return;
+  }
+  searchResults.forEach((result) => {
+    const resultCard = document.createElement("div");
+    resultCard.classList.add("card");
+
+    const cardLink = document.createElement("a");
+    cardLink.href = `${appState.search.type}-details.html?id=${result.id}`;
+
+    const cardLinkImage = document.createElement("img");
+    cardLinkImage.src = result.poster_path
+      ? `https://image.tmdb.org/t/p/w500${result.poster_path}`
+      : "/images/no-image.jpg";
+    cardLinkImage.classList.add("card-img-top");
+    cardLinkImage.alt =
+      appState.search.type === "movie" ? result.title : result.name;
+
+    const cardBody = document.createElement("div");
+    cardBody.classList.add("card-body");
+
+    const cardTitle = document.createElement("h5");
+    cardTitle.classList.add("card-title");
+    cardTitle.textContent =
+      appState.search.type === "movie" ? result.title : result.name;
+
+    const cardText = document.createElement("p");
+    cardText.classList.add("card-text");
+
+    const small = document.createElement("small");
+    small.classList.add("text-muted");
+    small.textContent =
+      appState.search.type === "movie"
+        ? `Released: ${result.release_date}`
+        : `First Aired: ${result.first_air_date}`;
+
+    cardText.appendChild(small);
+    cardBody.append(cardTitle, cardText);
+    cardLink.appendChild(cardLinkImage);
+    resultCard.append(cardLink, cardBody);
+
+    document.getElementById(
+      "search-results-heading"
+    ).innerHTML = `<h3>Showing ${appState.search.totalResults} results for "${appState.search.query}"</h3>`;
+    document.getElementById("search-results").appendChild(resultCard);
+  });
+  showPagination();
+};
+
+// ------------------------------------utility functions---------------------------------------
 const initializeSwiper = () => {
   const swiper = new Swiper(".swiper", {
     slidesPerView: 4,
@@ -399,6 +472,18 @@ const highlightActiveLink = () => {
       link.classList.add("active");
     }
   });
+};
+
+//Shows the loading overlay
+const showLoading = () => {
+  document.activeElement.blur();
+  document.querySelector(".loading").classList.remove("hidden");
+};
+
+//Hides the loading overlay
+const hideLoading = () => {
+  document.activeElement.blur();
+  document.querySelector(".loading").classList.add("hidden");
 };
 
 //Adds comas to numbers
@@ -436,6 +521,51 @@ const mostPopularCast = (arrCast) => {
   return arrCast.reverse().slice(0, 5);
 };
 
+//Shows an alert message
+const showAlert = (message, className) => {
+  const alertDiv = document.createElement("div");
+  alertDiv.classList.add("alert", className);
+  alertDiv.textContent = message;
+  document.getElementById("alert").appendChild(alertDiv);
+
+  setTimeout(() => alertDiv.remove(), 2000);
+};
+
+const showPagination = () => {
+  //feeling lazy walahi
+  document.getElementById("pagination").innerHTML = `
+  <div class="pagination">
+    <button class="btn btn-primary" id="prev">Prev</button>
+    <button class="btn btn-primary" id="next">Next</button>
+    <div class="page-counter">Page ${appState.search.page} of ${appState.search.totalPages}</div>
+  </div>`;
+  //disables prev button if on the first page
+  if (appState.search.page === 1) {
+    document.getElementById("prev").disabled = true;
+  }
+  //disables next button if on the last page
+  if (appState.search.page === appState.search.totalPages) {
+    document.getElementById("next").disabled = true;
+  }
+  nextPage();
+  prevPage();
+};
+
+//next search page
+const nextPage = () => {
+  document.getElementById("next").addEventListener("click", async () => {
+    appState.search.page++;
+    getSearchResults();
+  });
+};
+//Previous search page
+const prevPage = () => {
+  document.getElementById("prev").addEventListener("click", async () => {
+    appState.search.page--;
+    getSearchResults();
+  });
+};
+
 //Initialize app
 function init() {
   // creating a router to know which functions to run on which page
@@ -455,7 +585,7 @@ function init() {
       getTvDetails();
       break;
     case "/search.html":
-      console.log("search page");
+      getSearchResults();
       break;
   }
 
